@@ -43,6 +43,8 @@ export default function App() {
   const [selectedSport, setSelectedSport] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [stats, setStats] = useState<any>(null);
+  const [playerProps, setPlayerProps] = useState<any[]>([]);
+  const [loadingProps, setLoadingProps] = useState(false);
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -59,6 +61,20 @@ export default function App() {
       .then(data => setStats(data))
       .catch(err => console.error('Stats fetch failed', err));
   }, []);
+
+  useEffect(() => {
+    setLoadingProps(true);
+    fetch(`/api/player-props?sport=${selectedSport}`)
+      .then(res => res.json())
+      .then(data => {
+        setPlayerProps(data);
+        setLoadingProps(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch props', err);
+        setLoadingProps(false);
+      });
+  }, [selectedSport]);
 
   useEffect(() => {
     setLoading(true);
@@ -350,27 +366,42 @@ export default function App() {
           </div>
         </motion.div>
 
-        {/* Alert Log (Mini Bento) */}
+        {/* Player Prop Edge Card (Replaces Alert Log) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="col-span-12 md:col-span-6 lg:col-span-4 bento-card flex flex-col"
         >
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6">Real-Time Alerts</h3>
-          <div className="space-y-4 flex-grow overflow-y-auto max-h-[180px] scrollbar-hide">
-            <div className="p-4 bg-dark-bg border-l-2 border-alpha-green rounded-r-xl">
-              <p className="text-[10px] text-white font-black uppercase tracking-widest mb-1">Alpha Spike</p>
-              <p className="text-[11px] font-mono text-slate-500">KC Line move Detected (-3.5 → -4.0) via Sharp Indicator.</p>
-            </div>
-            <div className="p-4 bg-dark-bg border-l-2 border-orange-500 rounded-r-xl">
-              <p className="text-[10px] text-white font-black uppercase tracking-widest mb-1">Limit Exposure</p>
-              <p className="text-[11px] font-mono text-slate-500">Extreme limit liability detected at LV Sportsbook for PHI.</p>
-            </div>
-            <div className="p-4 bg-dark-bg border-l-2 border-blue-500 rounded-r-xl">
-              <p className="text-[10px] text-white font-black uppercase tracking-widest mb-1">Weather Sync</p>
-              <p className="text-[11px] font-mono text-slate-500">Wind gusts impacting PHI @ GB kicking logic. Variance adjusted.</p>
-            </div>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Best Player Bets</h3>
+            <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green text-[8px] font-black rounded uppercase">May 2026 Season</span>
+          </div>
+          <div className="space-y-3 flex-grow overflow-y-auto max-h-[190px] scrollbar-hide">
+            {loadingProps ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse"></div>)}
+              </div>
+            ) : playerProps.map((prop, idx) => (
+              <div key={prop.id} className="p-4 bg-dark-bg border border-dark-border rounded-xl group hover:border-alpha-green/40 transition-all cursor-pointer">
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <p className="text-[9px] text-alpha-green font-black uppercase tracking-tighter mb-0.5">{prop.player_name}</p>
+                    <p className="text-[11px] text-white font-bold leading-none">{prop.prop_type}: {prop.line_value}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-black text-alpha-green font-mono">{prop.edge_score}</span>
+                    <p className="text-[7px] text-slate-500 uppercase tracking-widest leading-none mt-1">Edge</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                  <span className="text-[8px] text-slate-500 uppercase font-mono">{prop.team}</span>
+                  <span className={`text-[8px] font-black uppercase ${prop.over_odds < 0 ? 'text-white' : 'text-slate-400'}`}>
+                    Over {prop.over_odds > 0 ? `+${prop.over_odds}` : prop.over_odds}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </motion.div>
 
