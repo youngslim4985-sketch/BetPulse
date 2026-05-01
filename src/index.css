@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-alpha-green: #00FF41;
+  --color-dark-surface: #0c0c0e;
+  --color-dark-border: #1e1e1e;
+  --color-dark-bg: #050505;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-slate-200;
+  }
+}
+
+@layer components {
+  .bento-card {
+    @apply bg-dark-surface border border-dark-border rounded-2xl p-6 relative overflow-hidden transition-all duration-300;
+  }
+}
