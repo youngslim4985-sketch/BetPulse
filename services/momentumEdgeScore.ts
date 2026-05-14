@@ -1,7 +1,7 @@
 import { estimateSharpMoney } from './sharpMoney.ts';
 
 export interface MomentumScoreInput {
-  sportKey: string;
+  sportKey?: string;
   lineMovement: number;
   publicPercentage: number;
   matchupRating: number;
@@ -10,44 +10,36 @@ export interface MomentumScoreInput {
 }
 
 export function calculateMomentumEdgeScore({
-  sportKey,
   lineMovement = 0,
   publicPercentage = 50,
   matchupRating = 60,
-  momentumEdge = 65,
-  betPercentageOnFavorite = null
+  momentumEdge = 65, // This is our Edge Factor (Internal Signal)
 }: MomentumScoreInput): number {
 
   const sharpPercentage = estimateSharpMoney({
     lineMovement,
     publicBetPercentage: publicPercentage,
-    betPercentageOnFavorite,
-    sportKey
   });
 
   /**
-   * Momentum Edge Score™ Formula
-   * Sport-specific weight adjustments:
-   * Spread-heavy sports (Football/Basketball) emphasize line movement.
-   * Moneyline-heavy sports (Baseball/Soccer) emphasize sharp money indicators.
+   * Momentum Edge™ Formula (Production Version)
+   * Weights:
+   * 30% - Normalized Line Movement Intensity
+   * 25% - Sharp Money Indicator (RLM + Steam)
+   * 15% - Public Contrarianism
+   * 15% - Matchup Quality
+   * 15% - Momentum Edge Variable (Internal Edge Factor)
    */
-  let lineWeight = 0.32;
-  let sharpWeight = 0.28;
-
-  if (['baseball_mlb', 'soccer_epl', 'soccer_laliga'].includes(sportKey)) {
-    lineWeight = 0.22;      // Moneyline shifts are smaller relatively
-    sharpWeight = 0.38;     // Professional steam is huge in ML sports
-  } else if (sportKey.includes('ncaaf') || sportKey.includes('ncaab')) {
-    lineWeight = 0.30;      // College variance handling
-    sharpWeight = 0.30;
-  }
+  
+  // Normalize line movement: 1.0 point shift = 5 units. Cap at 10 (which is 50 normalized units)
+  const normalizedMovement = Math.min(10, Math.abs(lineMovement) * 5);
 
   const score = 
-    (Math.abs(lineMovement) * lineWeight) +
-    (sharpPercentage * sharpWeight) +
-    ((100 - publicPercentage) * 0.16) +
-    (matchupRating * 0.12) +
-    (momentumEdge * 0.12);
+    (normalizedMovement * 0.30) +
+    (sharpPercentage * 0.25) +
+    ((100 - publicPercentage) * 0.15) +
+    (matchupRating * 0.15) +
+    (momentumEdge * 0.15);
 
   return Math.min(100, Math.max(0, Math.round(score)));
 }

@@ -4,6 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { calculateMomentumEdgeScore } from "./services/momentumEdgeScore.ts";
 import { calculatePlayerPropEdge } from "./services/playerPropsEdge.ts";
+import { calculateEdgeFactor } from "./services/edgeFactor.ts";
+import { generateGameIQInsights } from "./services/insightEngine.ts";
 import { getAlphaInsights } from "./services/geminiService.ts";
 import { getHistoricalStats } from "./services/performanceService.ts";
 
@@ -43,8 +45,14 @@ async function startServer() {
       spread: -8.5,
       line_movement: -1.5,
       public_betting_pct: 78,
-      momentum_edge: 94,
       matchup_rating: 98,
+      edge_inputs: {
+        injuryImpact: 85,
+        weatherImpact: 0,
+        travelFatigue: 20,
+        recentForm: 75,
+        modelSignal: 95
+      }
     },
     {
       id: "nba-playoffs-2",
@@ -56,8 +64,14 @@ async function startServer() {
       spread: -4.5,
       line_movement: 0.5,
       public_betting_pct: 42,
-      momentum_edge: 82,
       matchup_rating: 96,
+      edge_inputs: {
+        injuryImpact: 10,
+        weatherImpact: 0,
+        travelFatigue: 5,
+        recentForm: 82,
+        modelSignal: 88
+      }
     },
 
     // --- MLB REGULAR SEASON ---
@@ -75,8 +89,14 @@ async function startServer() {
       spread: -1.5,
       line_movement: 0.2,
       public_betting_pct: 62,
-      momentum_edge: 68,
       matchup_rating: 82,
+      edge_inputs: {
+        injuryImpact: 5,
+        weatherImpact: 40,
+        travelFatigue: 15,
+        recentForm: 60,
+        modelSignal: 65
+      }
     },
     {
       id: "mlb-today-2",
@@ -88,8 +108,14 @@ async function startServer() {
       spread: -1.5,
       line_movement: -0.5,
       public_betting_pct: 88,
-      momentum_edge: 42,
       matchup_rating: 90,
+      edge_inputs: {
+        injuryImpact: 15,
+        weatherImpact: 10,
+        travelFatigue: 60,
+        recentForm: 92,
+        modelSignal: 90
+      }
     },
 
     // --- ELITE SOCCER ---
@@ -107,8 +133,14 @@ async function startServer() {
       spread: 0,
       line_movement: -0.25,
       public_betting_pct: 55,
-      momentum_edge: 91,
       matchup_rating: 99,
+      edge_inputs: {
+        injuryImpact: 0,
+        weatherImpact: 0,
+        travelFatigue: 10,
+        recentForm: 98,
+        modelSignal: 95
+      }
     },
 
     // --- TOMORROW ---
@@ -122,8 +154,14 @@ async function startServer() {
       spread: -2,
       line_movement: -1.0,
       public_betting_pct: 45,
-      momentum_edge: 89,
       matchup_rating: 94,
+      edge_inputs: {
+        injuryImpact: 70,
+        weatherImpact: 0,
+        travelFatigue: 20,
+        recentForm: 85,
+        modelSignal: 92
+      }
     },
     {
       id: "mlb-tomorrow-1",
@@ -135,8 +173,14 @@ async function startServer() {
       spread: 1.5,
       line_movement: 0.5,
       public_betting_pct: 50,
-      momentum_edge: 75,
       matchup_rating: 80,
+      edge_inputs: {
+        injuryImpact: 0,
+        weatherImpact: 60,
+        travelFatigue: 5,
+        recentForm: 75,
+        modelSignal: 80
+      }
     }
   ];
 
@@ -197,6 +241,52 @@ async function startServer() {
   ];
 
   // API Routes
+  app.post("/api/analyze", async (req, res) => {
+    const { gameId } = req.body;
+    const game = mockGames.find(g => g.id === gameId);
+    
+    if (!game) return res.status(404).json({ error: "Game not found" });
+
+    const momentumEdge = calculateEdgeFactor(game.edge_inputs || {});
+    const alphaScore = calculateMomentumEdgeScore({
+      lineMovement: game.line_movement,
+      publicPercentage: game.public_betting_pct,
+      matchupRating: game.matchup_rating,
+      momentumEdge: momentumEdge
+    });
+
+    // Mock Monetization Limit
+    const isPro = req.headers['x-user-tier'] === 'pro';
+
+    const structuredInsights = isPro ? generateGameIQInsights({
+      lineMovement: game.line_movement,
+      sharpPercentage: 75,
+      publicPercentage: game.public_betting_pct,
+      matchupRating: game.matchup_rating,
+      edgeFactor: momentumEdge
+    }) : ["Upgrade to EdgePulse PRO to unlock detailed market intelligence and proprietary sharp indicators."];
+
+    // Get AI Verdict from Gemini
+    const aiVerdict = await getAlphaInsights({ ...game, alpha_score: alphaScore });
+
+    res.json({
+      success: true,
+      data: {
+        game: `${game.away_team} @ ${game.home_team}`,
+        alphaScore,
+        momentumEdge,
+        lineMovement: game.line_movement,
+        publicPercentage: game.public_betting_pct,
+        matchupRating: game.matchup_rating,
+        structuredInsights,
+        aiVerdict,
+        isPro,
+        market_version: `v4.2.${Math.floor(Date.now() / 100000)}`,
+        ingestion_latency: "42ms"
+      }
+    });
+  });
+
   app.get("/api/player-props", (req, res) => {
     const sport = req.query.sport as string;
     
@@ -209,7 +299,7 @@ async function startServer() {
           sportKey: game?.sport_key || 'basketball_nba',
           propType: prop.prop_type,
           lineValue: prop.line_value,
-          projectedValue: prop.project_value,
+          projectedValue: prop.projected_value,
           overOdds: prop.over_odds,
           underOdds: prop.under_odds,
           recentAvg: prop.recent_avg,
@@ -229,17 +319,22 @@ async function startServer() {
       filteredGames = mockGames.filter(g => g.sport_key === sport || g.sport_key.startsWith(sport));
     }
 
-    const gamesWithScores = filteredGames.map(game => ({
-      ...game,
-      alpha_score: calculateMomentumEdgeScore({
-        sportKey: game.sport_key,
-        lineMovement: game.line_movement,
-        publicPercentage: game.public_betting_pct,
-        matchupRating: game.matchup_rating,
-        momentumEdge: game.momentum_edge
-      }),
-      sharp_money_indicator: 0.75 
-    }));
+    const gamesWithScores = filteredGames.map(game => {
+      const momentumEdge = calculateEdgeFactor(game.edge_inputs || {});
+      
+      return {
+        ...game,
+        momentum_edge: momentumEdge,
+        alpha_score: calculateMomentumEdgeScore({
+          sportKey: game.sport_key,
+          lineMovement: game.line_movement,
+          publicPercentage: game.public_betting_pct,
+          matchupRating: game.matchup_rating,
+          momentumEdge: momentumEdge
+        }),
+        sharp_money_indicator: 0.75 
+      };
+    });
     res.json(gamesWithScores);
   });
 
@@ -247,12 +342,13 @@ async function startServer() {
     const game = mockGames.find(g => g.id === req.params.gameId);
     if (!game) return res.status(404).json({ error: "Game not found" });
     
+    const momentumEdge = calculateEdgeFactor(game.edge_inputs || {});
     const alpha_score = calculateMomentumEdgeScore({
       sportKey: game.sport_key,
       lineMovement: game.line_movement,
       publicPercentage: game.public_betting_pct,
       matchupRating: game.matchup_rating,
-      momentumEdge: game.momentum_edge
+      momentumEdge: momentumEdge
     });
 
     const insights = await getAlphaInsights({ ...game, alpha_score });

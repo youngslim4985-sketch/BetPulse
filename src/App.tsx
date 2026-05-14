@@ -11,7 +11,10 @@ import {
   Layers,
   ArrowUpRight,
   Database,
-  Cpu
+  Cpu,
+  Brain,
+  Search,
+  X
 } from 'lucide-react';
 
 interface Game {
@@ -45,6 +48,11 @@ export default function App() {
   const [stats, setStats] = useState<any>(null);
   const [playerProps, setPlayerProps] = useState<any[]>([]);
   const [loadingProps, setLoadingProps] = useState(false);
+
+  const [isGameIQOpen, setIsGameIQOpen] = useState(false);
+  const [iqQuery, setIqQuery] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [iqResult, setIqResult] = useState<any>(null);
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -92,6 +100,29 @@ export default function App() {
       });
   }, [selectedSport, selectedDate]);
 
+  const handleAnalyzeGame = (gameId: string) => {
+    setIsAnalyzing(true);
+    setIqResult(null);
+    fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setIqResult(data.data);
+        setIsAnalyzing(false);
+      })
+      .catch(err => {
+        console.error('Analysis failed', err);
+        setIsAnalyzing(false);
+      });
+  };
+
+  const filteredIqSearch = games.filter(g => 
+    g.home_team.toLowerCase().includes(iqQuery.toLowerCase()) || 
+    g.away_team.toLowerCase().includes(iqQuery.toLowerCase())
+  );
   useEffect(() => {
     if (selectedGame) {
       setLoadingInsights(true);
@@ -119,23 +150,29 @@ export default function App() {
       <header className="flex justify-between items-center mb-10 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-5">
           <div className="w-12 h-12 bg-alpha-green rounded-lg flex items-center justify-center text-black font-black text-2xl shadow-[0_0_20px_rgba(0,255,65,0.4)]">
-            M
+            LB
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white uppercase italic">
-              Momentum Edge<span className="text-alpha-green italic lowercase">™</span> Score
+              Line Breaker<span className="text-alpha-green italic lowercase">™</span>
             </h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-semibold flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-alpha-green rounded-full animate-pulse"></span>
-              Sharp Ingestion Feed • NFL Edge Analytics
+              Event-Driven Architecture • Market Logic v4.2 • CID: 0xFB22A
             </p>
           </div>
         </div>
         
-        <div className="hidden lg:flex items-center gap-4">
-          <div className="px-5 py-2 bg-dark-surface border border-dark-border rounded-full flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-4">
+            <button 
+              onClick={() => setIsGameIQOpen(true)}
+              className="px-5 py-2 bg-dark-bg border border-alpha-green/30 text-alpha-green text-[11px] font-black rounded-full hover:bg-alpha-green/10 transition-all uppercase tracking-widest flex items-center gap-2"
+            >
+              <Brain size={14} /> Game IQ™
+            </button>
+            <div className="px-5 py-2 bg-dark-surface border border-dark-border rounded-full flex items-center gap-3">
              <Layers size={14} className="text-alpha-green" />
-             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Sharp Money Engine v2</span>
+             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">FAISS-Backed Dedupe Engine</span>
           </div>
           <button className="px-6 py-2 bg-alpha-green text-black text-xs font-black rounded-lg hover:bg-[#00cc34] transition-all uppercase tracking-widest shadow-xl shadow-alpha-green/10">
             Get Pro Access
@@ -374,7 +411,10 @@ export default function App() {
           className="col-span-12 md:col-span-6 lg:col-span-4 bento-card flex flex-col"
         >
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Best Player Bets</h3>
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Best Player Bets</h3>
+              <p className="text-[7px] text-slate-600 uppercase font-mono tracking-widest mt-0.5">Deduplicated Prop Feed • FAISS v1.2</p>
+            </div>
             <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green text-[8px] font-black rounded uppercase">May 2026 Season</span>
           </div>
           <div className="space-y-3 flex-grow overflow-y-auto max-h-[190px] scrollbar-hide">
@@ -571,6 +611,189 @@ export default function App() {
                <p className="text-center text-[9px] font-mono text-slate-500 uppercase tracking-widest">
                  SECURED VIA ALPHA ENGINE ENCRYPTION // NO DATA RETAINED
                </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      
+      {/* Game IQ™ Analyst Modal */}
+      <AnimatePresence>
+        {isGameIQOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsGameIQOpen(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-lg"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="relative bg-[#0a0a0c] border border-alpha-green/20 rounded-[2.5rem] p-10 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_150px_rgba(0,255,65,0.1)]"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 bg-alpha-green rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(0,255,65,0.5)]">
+                     <Brain size={22} className="text-black" />
+                   </div>
+                   <div>
+                     <h2 className="text-3xl font-black uppercase italic tracking-tighter text-white">Game IQ<span className="text-alpha-green text-sm italic lowercase align-top ml-1">™</span></h2>
+                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Real-Time Analytical Breakdown Engine</p>
+                   </div>
+                </div>
+                <button onClick={() => setIsGameIQOpen(false)} className="text-slate-500 hover:text-white p-2">
+                   <X size={24} />
+                </button>
+              </div>
+
+              {!iqResult && (
+                <div className="flex-grow flex flex-col">
+                   <div className="relative mb-8">
+                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+                     <input 
+                       autoFocus
+                       type="text" 
+                       placeholder="Search team or select from active daily board..." 
+                       className="w-full bg-dark-bg border border-dark-border rounded-2xl py-6 pl-16 pr-6 text-white text-lg font-black focus:border-alpha-green/50 focus:outline-none transition-all placeholder:text-slate-700"
+                       value={iqQuery}
+                       onChange={(e) => setIqQuery(e.target.value)}
+                     />
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 scrollbar-hide">
+                     {filteredIqSearch.map(game => (
+                       <button
+                         key={game.id}
+                         onClick={() => handleAnalyzeGame(game.id)}
+                         className="p-6 bg-dark-surface/50 border border-dark-border rounded-2xl text-left hover:border-alpha-green/40 hover:bg-alpha-green/5 transition-all group"
+                       >
+                         <div className="flex justify-between items-center">
+                            <div>
+                               <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mb-1">{game.sport_key.split('_')[1]}</p>
+                               <p className="text-xl font-black text-white uppercase italic group-hover:text-alpha-green transition-colors">{game.away_team} @ {game.home_team}</p>
+                            </div>
+                            <ArrowUpRight size={20} className="text-slate-700 group-hover:text-alpha-green group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                         </div>
+                       </button>
+                     ))}
+                   </div>
+                </div>
+              )}
+
+              {isAnalyzing && (
+                <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="relative">
+                    <div className="w-24 h-24 border-4 border-alpha-green/20 border-t-alpha-green rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Brain size={32} className="text-alpha-green animate-pulse" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2">Propagating Event State...</h3>
+                    <p className="text-xs text-slate-500 font-mono animate-pulse">Running FAISS Parity Check • bloom-filter deduping • L1/L2 Cache Sync</p>
+                  </div>
+                </div>
+              )}
+
+              {iqResult && (
+                <div className="flex-grow overflow-y-auto pr-2 scrollbar-hide">
+                  <div className="bg-alpha-green/5 border border-alpha-green/20 rounded-3xl p-8 mb-8">
+                     <div className="flex justify-between items-start mb-8">
+                        <div>
+                          <p className="text-[10px] text-alpha-green font-black uppercase tracking-[0.3em] mb-2 italic">Composite Edge Output</p>
+                          <h4 className="text-4xl font-black text-white uppercase italic tracking-tighter">{iqResult.game}</h4>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Alpha Score</p>
+                          <p className="text-6xl font-black text-alpha-green font-mono tracking-tighter drop-shadow-[0_0_20px_rgba(0,255,65,0.4)]">{iqResult.alphaScore}</p>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                           <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Momentum Edge</p>
+                           <p className="text-lg font-black text-white">+{iqResult.momentumEdge}%</p>
+                        </div>
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                           <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Line Movement</p>
+                           <p className="text-lg font-black text-alpha-green">{iqResult.lineMovement} Pts</p>
+                        </div>
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                           <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Public Split</p>
+                           <p className="text-lg font-black text-white">{iqResult.publicPercentage}%</p>
+                        </div>
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                           <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Matchup IQ</p>
+                           <p className="text-lg font-black text-white">{iqResult.matchupRating}/100</p>
+                        </div>
+                     </div>
+                     <div className="mt-4 flex gap-6 px-2">
+                        <div className="flex items-center gap-2">
+                           <div className="w-2 h-2 bg-alpha-green rounded-full"></div>
+                           <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Market Vector: {iqResult.market_version}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <Activity size={10} className="text-slate-500" />
+                           <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Latent Ingestion: {iqResult.ingestion_latency}</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <h5 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Database size={14} className="text-alpha-green" /> Structured Intelligence
+                        {!iqResult.isPro && (
+                          <span className="ml-2 px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded uppercase flex items-center gap-1">
+                            Pro Only
+                          </span>
+                        )}
+                      </h5>
+                      <div className="space-y-3">
+                        {iqResult.structuredInsights.map((insight: string, i: number) => (
+                           <div key={i} className={`p-4 rounded-r-xl text-[11px] font-mono leading-relaxed transition-all ${
+                             iqResult.isPro 
+                               ? 'bg-dark-bg border-l-2 border-alpha-green text-slate-300' 
+                               : 'bg-white/5 border border-white/10 text-slate-500 italic'
+                           }`}>
+                             {insight}
+                           </div>
+                        ))}
+                        {!iqResult.isPro && (
+                          <button className="w-full mt-4 py-4 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-yellow-500 transition-all hover:text-black">
+                            Unlock Full Pro Intelligence
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Zap size={14} className="text-alpha-green" /> AI Analytical Verdict
+                      </h5>
+                      <div className="p-6 bg-alpha-green/5 border border-alpha-green/20 rounded-2xl text-[13px] text-slate-200 font-medium leading-relaxed italic">
+                        {iqResult.aiVerdict}
+                      </div>
+                      <div className="mt-6 p-6 border border-dark-border rounded-3xl text-center">
+                         <p className="text-[10px] text-slate-500 uppercase font-black mb-3 italic">Recommendation Confidence</p>
+                         <div className="text-3xl font-black text-white italic truncate tracking-tighter">
+                            {iqResult.alphaScore > 80 ? 'PREMIUM ALPHA' : iqResult.alphaScore > 65 ? 'VALUE SIGNAL' : 'NEUTRAL MARKET'}
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-10 flex gap-4">
+                     <button className="flex-1 bg-white text-black font-black uppercase tracking-widest py-4 rounded-xl hover:bg-slate-200 transition-all text-xs" onClick={() => setIqResult(null)}>
+                       Analyze Another Game
+                     </button>
+                     <button className="flex-1 bg-alpha-green text-black font-black uppercase tracking-widest py-4 rounded-xl hover:bg-[#00cc34] transition-all text-xs">
+                       View Full Pro Breakdown
+                     </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
