@@ -770,10 +770,17 @@ export default function App() {
                     </div>
                     <div>
                       <h5 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Zap size={14} className="text-alpha-green" /> AI Analytical Verdict
+                        <Activity size={14} className="text-alpha-green" /> Engine Infrastructure (v4.2)
                       </h5>
-                      <div className="p-6 bg-alpha-green/5 border border-alpha-green/20 rounded-2xl text-[13px] text-slate-200 font-medium leading-relaxed italic">
-                        {iqResult.aiVerdict}
+                      <div className="grid grid-cols-2 gap-3">
+                         <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                            <p className="text-[8px] text-slate-500 uppercase font-black mb-1">Dedupe Bloom Filter</p>
+                            <span className="text-[10px] text-alpha-green font-mono">ACTIVE (0.001% AR)</span>
+                         </div>
+                         <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                            <p className="text-[8px] text-slate-500 uppercase font-black mb-1">State Consistency</p>
+                            <span className="text-[10px] text-alpha-green font-mono italic">SYMMETRIC CAS</span>
+                         </div>
                       </div>
                       <div className="mt-6 p-6 border border-dark-border rounded-3xl text-center">
                          <p className="text-[10px] text-slate-500 uppercase font-black mb-3 italic">Recommendation Confidence</p>

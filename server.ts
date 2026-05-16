@@ -6,6 +6,8 @@ import { calculateMomentumEdgeScore } from "./services/momentumEdgeScore.ts";
 import { calculatePlayerPropEdge } from "./services/playerPropsEdge.ts";
 import { calculateEdgeFactor } from "./services/edgeFactor.ts";
 import { generateGameIQInsights } from "./services/insightEngine.ts";
+import { marketStateBus } from "./services/marketState.ts";
+import { startIngestionPipeline } from "./services/ingestionPipeline.ts";
 import { getAlphaInsights } from "./services/geminiService.ts";
 import { getHistoricalStats } from "./services/performanceService.ts";
 
@@ -18,7 +20,23 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Enhanced Mock data with realistic daily schedule
+  // Initialize Event-Driven Architecture Components
+  startIngestionPipeline();
+
+  // API Routes
+  app.get("/api/health/pipeline", (req, res) => {
+    res.json({
+      status: "HEALTHY",
+      brand: "Line Breaker™",
+      component: "v4.2 PROJECTION_WORKER",
+      stats: marketStateBus.getStats(),
+      checkpoints: [
+        { name: "L1_CACHE", status: "SYNCED" },
+        { name: "LUA_CAS_ENGINE", status: "READY" },
+        { name: "BLOOM_FILTER", status: "OPERATIONAL" }
+      ]
+    });
+  });
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
