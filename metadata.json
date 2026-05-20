@@ -2,5 +2,5 @@
   "name": "Line Breaker",
   "description": "Enterprise-grade sports betting intelligence and event-driven architecture hub featuring real-time odds normalization, sharp money tracking, and proprietary Momentum Edge™ analytics.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

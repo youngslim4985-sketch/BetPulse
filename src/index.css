@@ -1,20 +1,37 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --color-alpha-green: #00FF41;
-  --color-dark-surface: #0c0c0e;
-  --color-dark-border: #1e1e1e;
-  --color-dark-bg: #050505;
+:root {
+  --alpha-green: #00ff41;
+  --dark-bg: #050505;
+  --dark-surface: #0a0a0c;
+  --dark-border: #161618;
+}
+
+body {
+  margin: 0;
+  background-color: var(--dark-bg);
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 }
 
 @layer base {
   body {
-    @apply bg-dark-bg text-slate-200;
+    @apply antialiased;
   }
 }
 
-@layer components {
-  .bento-card {
-    @apply bg-dark-surface border border-dark-border rounded-2xl p-6 relative overflow-hidden transition-all duration-300;
-  }
+.bento-card {
+  @apply bg-dark-surface border border-dark-border rounded-[2rem] p-8 hover:border-alpha-green/20 transition-all duration-500;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;/* IE and Edge */
+  scrollbar-width: none;/* Firefox */
 }
