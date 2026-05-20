@@ -15,17 +15,27 @@ async function startServer() {
 
   // API Routes
   app.get("/api/health/pipeline", (req, res) => {
+    const stats = marketStateBus.getStats();
     res.json({
       status: "HEALTHY",
       brand: "Line Breaker™",
-      component: "v4.2 PROJECTION_WORKER",
-      stats: marketStateBus.getStats(),
+      component: "v4.2 EPISTEMIC_COMPILER",
+      stats: {
+        ...stats,
+        reconstructionEntropy: (stats.inferredStates / (stats.canonicalStates || 1)).toFixed(4)
+      },
       checkpoints: [
         { name: "L1_CACHE", status: "SYNCED" },
-        { name: "LUA_CAS_ENGINE", status: "READY" },
-        { name: "BLOOM_FILTER", status: "OPERATIONAL" }
+        { name: "TRUTH_FIREWALL", status: "ENFORCING" },
+        { name: "EPISTEMIC_ACCOUNTING", status: "ACTIVE" }
       ]
     });
+  });
+
+  app.get("/api/market/:symbol", (req, res) => {
+    const state = marketStateBus.getState(req.params.symbol);
+    if (!state) return res.status(404).json({ error: "Record Not Found" });
+    res.json(state);
   });
 
   app.get("/api/health", (req, res) => {

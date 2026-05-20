@@ -1,4 +1,4 @@
-import { estimateSharpMoney } from './sharpMoney.ts';
+import { estimateSharpMoney } from './sharpMoney';
 
 export interface MomentumScoreInput {
   sportKey?: string;

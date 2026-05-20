@@ -37,13 +37,13 @@ interface PerformanceStats {
 
 // --- Components ---
 
-const AlphaDriver = ({ label, value, icon: Icon }: { label: string, value: number, icon: any }) => (
+const AlphaDriver = ({ label, value, icon: Icon, color = "text-alpha-green" }: { label: string, value: number, icon: any, color?: string }) => (
   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
     <div className="flex justify-between items-center">
-      <div className="p-2 bg-alpha-green/10 rounded-lg">
-        <Icon size={14} className="text-alpha-green" />
+      <div className={`p-2 bg-alpha-green/10 rounded-lg`}>
+        <Icon size={14} className={color} />
       </div>
-      <span className="text-[10px] font-mono text-alpha-green">{(value * 100).toFixed(0)}%</span>
+      <span className={`text-[10px] font-mono ${color}`}>{(value * 100).toFixed(0)}%</span>
     </div>
     <div className="mt-2">
       <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">{label}</p>
@@ -51,7 +51,7 @@ const AlphaDriver = ({ label, value, icon: Icon }: { label: string, value: numbe
         <motion.div 
           initial={{ width: 0 }}
           animate={{ width: `${value * 100}%` }}
-          className="h-full bg-alpha-green/50"
+          className={`h-full ${color.replace('text-', 'bg-')}/50`}
         />
       </div>
     </div>
@@ -59,14 +59,13 @@ const AlphaDriver = ({ label, value, icon: Icon }: { label: string, value: numbe
 );
 
 const PerformanceSignal = () => {
-  const [stats, setStats] = useState<PerformanceStats>({
+  const [stats, setStats] = useState({
     alphaScore: 84.2,
-    decayRate: 0.12,
-    drivers: {
-      momentum: 0.92,
-      volatility: 0.45,
-      sentiment: 0.78,
-      liquidity: 0.88,
+    confidence: {
+      overall: 0.92,
+      completeness: 0.95,
+      temporal_continuity: 0.88,
+      provider_integrity: 0.99
     },
     metadata: {
       nodeId: "ST-X4-0xFB",
@@ -79,16 +78,15 @@ const PerformanceSignal = () => {
     <div className="flex flex-col gap-6">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Real-Time Performance Signal</h3>
-          <p className="text-[7px] text-slate-600 uppercase font-mono tracking-widest mt-0.5">Vector Parity: CID-90122</p>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Epistemic State Assessment</h3>
+          <p className="text-[7px] text-slate-600 uppercase font-mono tracking-widest mt-0.5">Truth Lineage: ROOT {" > "} EVENT_BUS {" > "} CAS_PROJECTION</p>
         </div>
         <div className="flex gap-2">
-          <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green text-[8px] font-black rounded uppercase">Live Ingestion</span>
+          <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green text-[8px] font-black rounded uppercase">Canonical Stream</span>
         </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
-        {/* Main Score Ring */}
         <div className="col-span-12 md:col-span-5 flex flex-col items-center justify-center p-8 bg-white/5 border border-white/10 rounded-[2.5rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
             <Zap size={40} className="text-alpha-green" />
@@ -96,67 +94,51 @@ const PerformanceSignal = () => {
           
           <div className="relative w-40 h-40">
             <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="80"
-                cy="80"
-                r="70"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="transparent"
-                className="text-white/5"
-              />
+              <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
               <motion.circle
-                cx="80"
-                cy="80"
-                r="70"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="transparent"
-                strokeDasharray="440"
+                cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="440"
                 initial={{ strokeDashoffset: 440 }}
-                animate={{ strokeDashoffset: 440 - (440 * stats.alphaScore) / 100 }}
+                animate={{ strokeDashoffset: 440 - (440 * stats.confidence.overall) }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
                 className="text-alpha-green"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-5xl font-black text-white italic tracking-tighter">{stats.alphaScore.toFixed(1)}</span>
-              <span className="text-[9px] text-alpha-green uppercase font-black tracking-widest mt-1 italic">Alpha Score</span>
+              <span className="text-5xl font-black text-white italic tracking-tighter">{(stats.confidence.overall * 100).toFixed(0)}</span>
+              <span className="text-[9px] text-alpha-green uppercase font-black tracking-widest mt-1 italic">Signal Certainty</span>
             </div>
           </div>
 
           <div className="mt-6 text-center">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-alpha-green rounded-full animate-pulse" />
-              <span className="text-[9px] font-mono text-slate-400">SIGNAL DECAY: {stats.decayRate}%/sec</span>
+              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tighter">Epistemic Buffer: SYNCED</span>
             </div>
           </div>
         </div>
 
-        {/* Alpha Drivers */}
         <div className="col-span-12 md:col-span-7 grid grid-cols-2 gap-4">
-          <AlphaDriver label="Momentum" value={stats.drivers.momentum} icon={TrendingUp} />
-          <AlphaDriver label="Volatility" value={stats.drivers.volatility} icon={Activity} />
-          <AlphaDriver label="Sentiment" value={stats.drivers.sentiment} icon={Brain} />
-          <AlphaDriver label="Liquidity" value={stats.drivers.liquidity} icon={Droplets} />
+          <AlphaDriver label="Completeness" value={stats.confidence.completeness} icon={TrendingUp} />
+          <AlphaDriver label="Temporal Flow" value={stats.confidence.temporal_continuity} icon={Activity} />
+          <AlphaDriver label="Source Integrity" value={stats.confidence.provider_integrity} icon={ShieldCheck} />
+          <AlphaDriver label="Inference Gap" value={0.12} icon={Brain} color="text-yellow-500" />
         </div>
       </div>
 
-      {/* Meta Bar */}
       <div className="flex justify-between items-center p-4 bg-black/40 border border-white/5 rounded-2xl">
         <div className="flex gap-6">
           <div className="flex flex-col">
-            <span className="text-[7px] text-slate-600 uppercase font-black">Node Identity</span>
-            <span className="text-[9px] text-slate-400 font-mono">{stats.metadata.nodeId}</span>
+            <span className="text-[7px] text-slate-600 uppercase font-black">Lineage Graph</span>
+            <span className="text-[9px] text-slate-400 font-mono italic">EVENT_S_0x22F {" > "} INF_RECON_T+1</span>
           </div>
           <div className="flex flex-col border-l border-white/10 pl-6">
-            <span className="text-[7px] text-slate-600 uppercase font-black">Latency</span>
-            <span className="text-[9px] text-slate-400 font-mono italic">{stats.metadata.latency}</span>
+            <span className="text-[7px] text-slate-600 uppercase font-black">Divergence Risk</span>
+            <span className="text-[9px] text-slate-400 font-mono italic">0.002% (NOMINAL)</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ShieldCheck size={12} className="text-alpha-green" />
-          <span className="text-[9px] text-alpha-green uppercase font-black italic tracking-tighter">Symmetric CAS Enabled</span>
+          <Database size={12} className="text-alpha-green" />
+          <span className="text-[9px] text-alpha-green uppercase font-black italic tracking-tighter">PROVENANCE_V2_AUDITABLE</span>
         </div>
       </div>
     </div>
