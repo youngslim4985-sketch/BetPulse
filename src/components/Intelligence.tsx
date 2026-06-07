@@ -27,7 +27,7 @@ export const Intelligence = () => {
       market: 'EPL: MCI @ RMA',
       score: 91,
       verdict: 'Liquidity Anomaly',
-      analysis: 'Abnormal volatility in the draw market. Inferred state suggests a high probability of institutional hedging. Alpha score peaked at 91 during early EU trading.',
+      analysis: 'Abnormal volatility in the draw market. Inferred state suggests a high probability of institutional hedging. LBS™ Score peaked at 91 during early EU trading.',
       confidence: 0.94,
       impact: 'CRITICAL'
     }
@@ -97,7 +97,7 @@ export const Intelligence = () => {
                     <BarChart2 size={14} className="text-alpha-green" /> Sentiment Skew: <span className="text-white">SHARP_HEAVY</span>
                  </div>
                  <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-white/10 pl-4">
-                    <TrendingUp size={14} className="text-alpha-green" /> Probability Alpha: <span className="text-white">+8.42%</span>
+                    <TrendingUp size={14} className="text-alpha-green" /> Probability Edge: <span className="text-white">+8.42%</span>
                  </div>
                </div>
             </div>

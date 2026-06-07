@@ -19,7 +19,8 @@ interface NavigationProps {
 
 export const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   const navItems = [
-    { id: 'DASHBOARD' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'LANDING' as ViewType, label: 'Observer', icon: LayoutDashboard },
+    { id: 'DASHBOARD' as ViewType, label: 'Pulse', icon: Activity },
     { id: 'MARKETS' as ViewType, label: 'Markets', icon: Search },
     { id: 'INTELLIGENCE' as ViewType, label: 'Intelligence', icon: Brain },
     { id: 'RESEARCH' as ViewType, label: 'Research', icon: Database },
@@ -28,13 +29,13 @@ export const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
 
   return (
     <nav className="fixed left-0 top-0 h-screen w-20 lg:w-64 bg-dark-surface border-r border-dark-border flex flex-col items-center lg:items-start p-6 z-40">
-      <div className="flex items-center gap-4 mb-12 lg:px-4">
+      <div className="flex items-center gap-4 mb-12 lg:px-4 cursor-pointer" onClick={() => onViewChange('LANDING')}>
         <div className="w-10 h-10 bg-alpha-green rounded-xl flex items-center justify-center text-black font-black text-xl shadow-[0_0_20px_rgba(0,255,65,0.3)]">
           LB
         </div>
         <div className="hidden lg:block">
           <h2 className="text-sm font-black text-white italic tracking-tighter uppercase whitespace-nowrap">Line Breaker<span className="text-alpha-green ml-1 lowercase">™</span></h2>
-          <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap">v4.2 Pro Core</p>
+          <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap italic">Line Breaker Score™</p>
         </div>
       </div>
 

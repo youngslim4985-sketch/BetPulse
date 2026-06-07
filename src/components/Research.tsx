@@ -125,7 +125,7 @@ export const Research = () => {
                     <p className="text-xl font-black text-white italic">+2.14%</p>
                  </div>
                  <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
-                    <p className="text-[8px] text-slate-600 uppercase font-black mb-1">Alpha Parity</p>
+                    <p className="text-[8px] text-slate-600 uppercase font-black mb-1">LBS™ Parity</p>
                     <p className="text-xl font-black text-alpha-green italic">0.9922</p>
                  </div>
               </div>

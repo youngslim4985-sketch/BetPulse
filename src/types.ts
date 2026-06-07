@@ -1,7 +1,7 @@
-export type ViewType = 'DASHBOARD' | 'MARKETS' | 'INTELLIGENCE' | 'RESEARCH' | 'PORTFOLIO';
+export type ViewType = 'LANDING' | 'DASHBOARD' | 'MARKETS' | 'INTELLIGENCE' | 'RESEARCH' | 'PORTFOLIO';
 
 export interface PerformanceStats {
-  alphaScore: number;
+  alphaScore: number; // This will now represent LBS™
   decayRate: number;
   drivers: {
     momentum: number;
@@ -16,10 +16,13 @@ export interface PerformanceStats {
   };
 }
 
+export type ScoreClassification = 'ELITE' | 'STRONG' | 'POSITIVE' | 'NEUTRAL' | 'AVOID';
+
 export interface MarketItem {
   id: string;
   symbol: string;
   description: string;
-  edgeScore: number;
+  lbsScore: number;
+  classification: ScoreClassification;
   type: 'NBA' | 'NFL' | 'MLB' | 'SOCCER';
 }

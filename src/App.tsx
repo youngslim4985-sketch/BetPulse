@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navigation } from './components/Navigation';
+import { Landing } from './components/Landing';
 import { Dashboard } from './components/Dashboard';
 import { Intelligence } from './components/Intelligence';
 import { Research } from './components/Research';
@@ -9,17 +10,18 @@ import { ViewType } from './types';
 import { Brain, Search, X, Database, ArrowUpRight, Cpu } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewType>('DASHBOARD');
+  const [currentView, setCurrentView] = useState<ViewType>('LANDING');
   const [isIqOpen, setIsIqOpen] = useState(false);
 
   const renderView = () => {
     switch (currentView) {
+      case 'LANDING': return <Landing />;
       case 'DASHBOARD': return <Dashboard />;
       case 'INTELLIGENCE': return <Intelligence />;
       case 'RESEARCH': return <Research />;
       case 'PORTFOLIO': return <Portfolio />;
       case 'MARKETS': return <Dashboard />; // Reuse dashboard for now as requested for pulse
-      default: return <Dashboard />;
+      default: return <Landing />;
     }
   };
 

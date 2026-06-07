@@ -73,16 +73,16 @@ const PerformanceSignal = () => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-4xl font-black text-white italic tracking-tighter">{(stats.confidence.overall * 100).toFixed(0)}</span>
-              <span className="text-[8px] text-alpha-green uppercase font-black tracking-widest mt-1 italic">Signal Certainty</span>
+              <span className="text-[8px] text-alpha-green uppercase font-black tracking-widest mt-1 italic">LBS™ Score</span>
             </div>
           </div>
         </div>
 
         <div className="col-span-12 md:col-span-7 grid grid-cols-2 gap-3">
-          <AlphaDriver label="Completeness" value={stats.confidence.completeness} icon={TrendingUp} />
-          <AlphaDriver label="Temporal Flow" value={stats.confidence.temporal_continuity} icon={Activity} />
-          <AlphaDriver label="Source Integrity" value={stats.confidence.provider_integrity} icon={ShieldCheck} />
-          <AlphaDriver label="Inference Gap" value={0.12} icon={Brain} color="text-yellow-500" />
+          <AlphaDriver label="Sharp Density" value={stats.confidence.completeness} icon={TrendingUp} />
+          <AlphaDriver label="Momentum Parity" value={stats.confidence.temporal_continuity} icon={Activity} />
+          <AlphaDriver label="Market Integrity" value={stats.confidence.provider_integrity} icon={ShieldCheck} />
+          <AlphaDriver label="Predictive Edge" value={0.88} icon={Brain} />
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-[12px] font-black text-alpha-green italic tracking-tighter">+{70 + i * 2}</p>
-                    <p className="text-[8px] text-slate-600 uppercase font-black">Edge Score</p>
+                    <p className="text-[8px] text-slate-600 uppercase font-black">LBS™ Score</p>
                   </div>
                 </div>
               </motion.div>
