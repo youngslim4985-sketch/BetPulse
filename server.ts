@@ -7,6 +7,7 @@ import tenantsRouter from "./services/tenants.router";
 import { authenticateApiKey, requireTierFeature } from "./services/apiKeyAuth";
 import { rateLimiter, getOrCreateAggregate } from "./services/rateLimiter";
 import { billingService } from "./services/billing.service";
+import { feedbackLoopManager } from "./services/feedbackLoop";
 
 async function startServer() {
   const app = express();
@@ -119,6 +120,75 @@ async function startServer() {
     const state = marketStateBus.getState(req.params.symbol);
     if (!state) return res.status(404).json({ error: "Record Not Found" });
     res.json(state);
+  });
+
+  // --- Phase 3: Shadowing & Validation Core Endpoints ---
+  app.get("/api/v1/lbs/decisions", (req, res) => {
+    const list = Array.from(feedbackLoopManager.decisions.values());
+    const sorted = list.sort((a, b) => b.timestamp - a.timestamp).slice(0, 80);
+    res.json({ success: true, decisions: sorted });
+  });
+
+  app.get("/api/v1/lbs/drift-metrics", (req, res) => {
+    feedbackLoopManager.recalculateDrift();
+    res.json({ success: true, driftMetrics: feedbackLoopManager.driftMetrics });
+  });
+
+  app.get("/api/v1/lbs/shadow-metrics", (req, res) => {
+    const reports = feedbackLoopManager.compilePerformanceReports();
+    res.json({
+      success: true,
+      champion: {
+        name: feedbackLoopManager.championModelName,
+        version: feedbackLoopManager.championModelVersion,
+        metrics: reports.champion
+      },
+      challenger: {
+        name: feedbackLoopManager.challengerModelName,
+        version: feedbackLoopManager.challengerModelVersion,
+        metrics: reports.challenger
+      }
+    });
+  });
+
+  app.post("/api/v1/lbs/label", (req, res) => {
+    const { event_id, label, source } = req.body;
+    if (!event_id || !label) {
+      return res.status(400).json({ success: false, error: "Missing event_id or label parameters" });
+    }
+    const success = feedbackLoopManager.labelEvent(event_id, label, source || 'ORACLE_MANUAL');
+    if (success) {
+      res.json({ success: true, message: `Event ${event_id} resolved with label "${label}"` });
+    } else {
+      res.status(404).json({ success: false, error: "Event decision not found" });
+    }
+  });
+
+  app.get("/api/v1/lbs/training-data", (req, res) => {
+    const { feature_version, model_version } = req.query;
+    const dataset = feedbackLoopManager.buildTrainingDataset(
+      feature_version as string,
+      model_version as string
+    );
+    res.json({ success: true, datasetSize: dataset.length, dataset });
+  });
+
+  app.post("/api/v1/lbs/promote", (req, res) => {
+    const result = feedbackLoopManager.promoteChallengerToChampion();
+    res.json(result);
+  });
+
+  app.post("/api/v1/lbs/retrain", (req, res) => {
+    feedbackLoopManager.triggerModelRetraining();
+    res.json({ success: true, message: "Engine retraining completed. Distribution alignment restored to nominal baselines." });
+  });
+
+  app.post("/api/v1/lbs/simulate-labels", (req, res) => {
+    const outcome = feedbackLoopManager.triggerStripeWebhookSimulator();
+    res.json({
+      message: `Simulated dynamic Stripe Billing and Sports Ingestion feedback cycle.`,
+      ...outcome
+    });
   });
 
   app.get("/api/health", (req, res) => {

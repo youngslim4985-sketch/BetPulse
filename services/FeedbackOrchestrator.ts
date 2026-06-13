@@ -2,6 +2,7 @@ import { SignalRecord, SignalType } from './FeedbackContract';
 import { signalRegistry } from './SignalRegistry';
 import { truthCollector } from './TruthCollector';
 import { bayesianConfidenceLayer } from './BayesianConfidenceLayer';
+import { feedbackLoopManager } from './feedbackLoop';
 
 export class FeedbackOrchestrator {
   /**
@@ -37,6 +38,9 @@ export class FeedbackOrchestrator {
       effective_confidence,
       features
     });
+
+    // Run Champion/Challenger shadow evaluation immediately
+    feedbackLoopManager.shadowScoreSignal(record);
 
     // 4. Schedule Truth Collection (Fact Finding)
     truthCollector.scheduleCollection(record.id, record.market_id, record.signal_time);

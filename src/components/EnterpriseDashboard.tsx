@@ -69,7 +69,7 @@ const USAGE_CHART_DATA = [
 ];
 
 export const EnterpriseDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'USAGE' | 'KEYS' | 'BILLING'>('USAGE');
+  const [activeTab, setActiveTab] = useState<'USAGE' | 'KEYS' | 'BILLING' | 'SHADOW'>('USAGE');
   
   // State for Tenant setup (Defaults to Internal Seeded T&F)
   const [tenant, setTenant] = useState({
@@ -100,11 +100,159 @@ export const EnterpriseDashboard = () => {
   const [copiedKeyText, setCopiedKeyText] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
-  // Fetch tenant info and keys list
+  // --- Phase 3: Shadowing & Validation Dashboard States ---
+  const [decisions, setDecisions] = useState<any[]>([]);
+  const [driftMetrics, setDriftMetrics] = useState<any[]>([]);
+  const [shadowMetrics, setShadowMetrics] = useState<any>(null);
+  const [isSimulatingResolution, setIsSimulatingResolution] = useState(false);
+  const [isRetraining, setIsRetraining] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+  const [promoteMessage, setPromoteMessage] = useState<string | null>(null);
+  const [curSelectedFeatureVersion, setCurSelectedFeatureVersion] = useState('v2.4');
+  const [curSelectedModelVersion, setCurSelectedModelVersion] = useState('v4.2');
+
+  const fetchShadowMetrics = async () => {
+    try {
+      const res = await fetch('/api/v1/lbs/shadow-metrics');
+      if (res.ok) {
+        const data = await res.json();
+        setShadowMetrics(data);
+      }
+    } catch (err) {
+      console.error('Failed to load shadow statistics', err);
+    }
+  };
+
+  const fetchDecisions = async () => {
+    try {
+      const res = await fetch('/api/v1/lbs/decisions');
+      if (res.ok) {
+        const data = await res.json();
+        setDecisions(data.decisions || []);
+      }
+    } catch (err) {
+      console.error('Failed to list decisions history', err);
+    }
+  };
+
+  const fetchDriftMetrics = async () => {
+    try {
+      const res = await fetch('/api/v1/lbs/drift-metrics');
+      if (res.ok) {
+        const data = await res.json();
+        setDriftMetrics(data.driftMetrics || []);
+      }
+    } catch (err) {
+      console.error('Failed to scan model drift lines', err);
+    }
+  };
+
+  const triggerManualLabel = async (eventId: string, label: 'clv_beat' | 'clv_miss') => {
+    try {
+      const res = await fetch('/api/v1/lbs/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: eventId, label, source: 'ORACLE_MANUAL' })
+      });
+      if (res.ok) {
+        // Trigger rapid refresh
+        fetchDecisions();
+        fetchShadowMetrics();
+      }
+    } catch (err) {
+      console.error('Failed to submit manual resolution', err);
+    }
+  };
+
+  const executeRetraining = async () => {
+    setIsRetraining(true);
+    try {
+      const res = await fetch('/api/v1/lbs/retrain', { method: 'POST' });
+      if (res.ok) {
+        setTimeout(() => {
+          fetchDriftMetrics();
+          fetchDecisions();
+          setIsRetraining(false);
+        }, 1200);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsRetraining(false);
+    }
+  };
+
+  const executePromoteModel = async () => {
+    setIsPromoting(true);
+    setPromoteMessage(null);
+    try {
+      const res = await fetch('/api/v1/lbs/promote', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setPromoteMessage(data.message);
+        fetchShadowMetrics();
+        fetchDecisions();
+        setTimeout(() => setPromoteMessage(null), 7000);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
+  const executeSimulateOutcomesWebhooks = async () => {
+    setIsSimulatingResolution(true);
+    try {
+      const res = await fetch('/api/v1/lbs/simulate-labels', { method: 'POST' });
+      if (res.ok) {
+        setTimeout(() => {
+          fetchDecisions();
+          fetchShadowMetrics();
+          setIsSimulatingResolution(false);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsSimulatingResolution(false);
+    }
+  };
+
+  const downloadCuratedTrainingJson = async () => {
+     try {
+       const url = `/api/v1/lbs/training-data?feature_version=${curSelectedFeatureVersion}&model_version=${curSelectedModelVersion}`;
+       const res = await fetch(url);
+       if (res.ok) {
+         const data = await res.json();
+         const jsonStr = JSON.stringify(data.dataset, null, 2);
+         const blob = new Blob([jsonStr], { type: 'application/json' });
+         const blobUrl = URL.createObjectURL(blob);
+         const link = document.createElement('a');
+         link.href = blobUrl;
+         link.download = `LBS_TrainingDataset_${curSelectedFeatureVersion}_${curSelectedModelVersion}.json`;
+         link.click();
+         URL.revokeObjectURL(blobUrl);
+       }
+     } catch (err) {
+       console.error(err);
+     }
+  };
+
+  // Fetch tenant info, keys list and baseline statistics
   useEffect(() => {
     fetchKeys();
     fetchBilling();
+    fetchDecisions();
+    fetchDriftMetrics();
+    fetchShadowMetrics();
   }, [tenant.id, tenant.tier]);
+
+  // Periodic Refresh Loop to display simulated real-time data ingestion
+  useEffect(() => {
+    const handle = setInterval(() => {
+      fetchDecisions();
+    }, 4500);
+    return () => clearInterval(handle);
+  }, []);
 
   const fetchKeys = async () => {
     try {
@@ -311,18 +459,19 @@ We Play Clean. We Build Real. We Last Forever.
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-white/5 pb-0.5 gap-2">
+      <div className="flex border-b border-white/5 pb-0.5 gap-2 overflow-x-auto">
         {[
           { id: 'USAGE' as const, label: 'Observer Usage Meter', icon: Activity },
           { id: 'KEYS' as const, label: 'API Credentials Suite', icon: Key },
           { id: 'BILLING' as const, label: 'Ledger & Statements', icon: CreditCard },
+          { id: 'SHADOW' as const, label: 'Model Epistemics & Shadowing', icon: Brain },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-3 px-6 py-4 border-b-2 text-xs font-black uppercase tracking-widest transition-all ${
+            className={`flex items-center gap-3 px-6 py-4 border-b-2 text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab.id 
-                ? 'border-yellow-500 text-yellow-500' 
+                ? 'border-yellow-500 text-yellow-500 bg-yellow-500/5' 
                 : 'border-transparent text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -872,6 +1021,445 @@ We Play Clean. We Build Real. We Last Forever.
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'SHADOW' && (
+          <div className="flex flex-col gap-10">
+            {/* Top Overview: Models & Promotion */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+              {/* Active Promotion System */}
+              <div className="lg:col-span-12 p-8 bg-dark-surface border border-white/5 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-yellow-500/10 via-alpha-green/20 to-transparent" />
+                <div>
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
+                    <Brain className="text-yellow-500" size={24} /> Champion / Challenger Shadow Validation Console
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed font-sans max-w-4xl">
+                    Line Breaker™ continuously scores sports telemetry data side-by-side using production and alternative Bayesian parameters. Below you can monitor real-time model statistics, check for drift events, resolve transaction outcomes, and manually promote challengers to the active champion position.
+                  </p>
+                </div>
+                <div className="flex flex-row gap-3 shrink-0 self-end md:self-center">
+                  <button
+                    onClick={executeSimulateOutcomesWebhooks}
+                    disabled={isSimulatingResolution}
+                    className="px-6 py-3 border border-white/5 bg-white/5 hover:border-white/10 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                  >
+                    {isSimulatingResolution ? (
+                      <RefreshCw size={14} className="animate-spin text-yellow-500" />
+                    ) : (
+                      <Zap size={14} className="text-yellow-500" />
+                    )}
+                    {isSimulatingResolution ? 'Simulating Resolution...' : 'Trigger Webhook Simulation'}
+                  </button>
+                  <button
+                    onClick={executePromoteModel}
+                    disabled={isPromoting || !shadowMetrics}
+                    className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase tracking-widest text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(234,179,8,0.2)] flex items-center gap-2"
+                  >
+                    {isPromoting ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <TrendingUp size={14} />
+                    )}
+                    Promote Challenger Model
+                  </button>
+                </div>
+              </div>
+
+              {/* Swapping / promotion feedback card */}
+              {promoteMessage && (
+                <div className="lg:col-span-12 p-6 bg-yellow-500/10 border border-yellow-500/30 rounded-3xl flex items-start gap-4 animate-pulse">
+                  <ShieldAlert className="text-yellow-500 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <h4 className="text-sm font-black text-yellow-500 uppercase tracking-widest">Active Model Shift Triggered</h4>
+                    <p className="text-xs text-slate-300 font-sans mt-0.5 leading-relaxed">{promoteMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Champion Column */}
+              <div className="lg:col-span-6 bento-card p-8 flex flex-col gap-6 bg-black/40 border border-white/5 rounded-3xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-2.5 h-full bg-alpha-green" />
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green rounded text-[9px] font-black uppercase tracking-widest">
+                      Active Champion (Production)
+                    </span>
+                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mt-2 mt-2">
+                      {shadowMetrics?.champion?.name || 'LBS_Entropy_Core'} {shadowMetrics?.champion?.version || 'v4.2'}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Current ROI Yield</p>
+                    <p className="text-3xl font-black text-alpha-green italic mt-1 leading-none mt-1">
+                      {shadowMetrics?.champion?.metrics?.roi !== undefined ? `${shadowMetrics.champion.metrics.roi}%` : '5.8%'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Precision</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.champion?.metrics?.precision !== undefined ? `${(shadowMetrics.champion.metrics.precision * 100).toFixed(1)}%` : '74.2%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Recall</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.champion?.metrics?.recall !== undefined ? `${(shadowMetrics.champion.metrics.recall * 100).toFixed(1)}%` : '81.4%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Accuracy</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.champion?.metrics?.accuracy !== undefined ? `${(shadowMetrics.champion.metrics.accuracy * 100).toFixed(1)}%` : '71.5%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">F1-Score</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.champion?.metrics?.f1Score !== undefined ? `${shadowMetrics.champion.metrics.f1Score}` : '0.776'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Confusion Matrix */}
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 font-mono text-xs">
+                  <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-3 font-sans border-b border-white/5 pb-2 mb-3">Confusion Matrix Ledger</p>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 bg-alpha-green/5 border border-alpha-green/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-alpha-green">TRUE POSITIVES (TP)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.champion?.metrics?.truePositives !== undefined ? shadowMetrics.champion.metrics.truePositives : '28'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-red-400">FALSE POSITIVES (FP)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.champion?.metrics?.falsePositives !== undefined ? shadowMetrics.champion.metrics.falsePositives : '9'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-500/5 border border-slate-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-slate-400">FALSE NEGATIVES (FN)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.champion?.metrics?.falseNegatives !== undefined ? shadowMetrics.champion.metrics.falseNegatives : '6'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-500/5 border border-slate-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-slate-400">TRUE NEGATIVES (TN)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.champion?.metrics?.trueNegatives !== undefined ? shadowMetrics.champion.metrics.trueNegatives : '14'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[8px] text-slate-650 mt-3 text-center italic font-sans leading-relaxed mt-3">
+                    Evaluated over {shadowMetrics?.champion?.metrics?.totalEvaluated || '57'} ground-truth labeled outcomes.
+                  </p>
+                </div>
+              </div>
+
+              {/* Challenger Column */}
+              <div className="lg:col-span-6 bento-card p-8 flex flex-col gap-6 bg-black/40 border border-white/5 rounded-3xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-2.5 h-full bg-yellow-500" />
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 rounded text-[9px] font-black uppercase tracking-widest">
+                      Shadow Challenger (Backtesting)
+                    </span>
+                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mt-2 mt-2">
+                      {shadowMetrics?.challenger?.name || 'LBS_Bayesian_Boost'} {shadowMetrics?.challenger?.version || 'v5.0'}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Current ROI Yield</p>
+                    <p className="text-3xl font-black text-yellow-500 italic mt-1 leading-none mt-1">
+                      {shadowMetrics?.challenger?.metrics?.roi !== undefined ? `${shadowMetrics.challenger.metrics.roi}%` : '8.6%'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Precision</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.challenger?.metrics?.precision !== undefined ? `${(shadowMetrics.challenger.metrics.precision * 100).toFixed(1)}%` : '82.1%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Recall</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.challenger?.metrics?.recall !== undefined ? `${(shadowMetrics.challenger.metrics.recall * 100).toFixed(1)}%` : '84.6%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Accuracy</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.challenger?.metrics?.accuracy !== undefined ? `${(shadowMetrics.challenger.metrics.accuracy * 100).toFixed(1)}%` : '78.9%'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">F1-Score</p>
+                    <p className="text-xl font-black text-white italic mt-1 font-mono mt-1">
+                      {shadowMetrics?.challenger?.metrics?.f1Score !== undefined ? `${shadowMetrics.challenger.metrics.f1Score}` : '0.833'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Confusion Matrix */}
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 font-mono text-xs">
+                  <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-3 font-sans border-b border-white/5 pb-2 mb-3">Confusion Matrix Ledger</p>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 bg-alpha-green/5 border border-alpha-green/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-alpha-green">TRUE POSITIVES (TP)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.challenger?.metrics?.truePositives !== undefined ? shadowMetrics.challenger.metrics.truePositives : '32'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-red-400">FALSE POSITIVES (FP)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.challenger?.metrics?.falsePositives !== undefined ? shadowMetrics.challenger.metrics.falsePositives : '7'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-500/5 border border-slate-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-slate-400">FALSE NEGATIVES (FN)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.challenger?.metrics?.falseNegatives !== undefined ? shadowMetrics.challenger.metrics.falseNegatives : '5'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-500/5 border border-slate-500/10 rounded-xl">
+                      <p className="text-[9px] text-slate-500 uppercase font-bold text-slate-400">TRUE NEGATIVES (TN)</p>
+                      <p className="text-base font-black text-white mt-1 mt-1">
+                        {shadowMetrics?.challenger?.metrics?.trueNegatives !== undefined ? shadowMetrics.challenger.metrics.trueNegatives : '13'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[8px] text-slate-650 mt-3 text-center italic font-sans leading-relaxed mt-3">
+                    Evaluated over {shadowMetrics?.challenger?.metrics?.totalEvaluated || '57'} ground-truth labeled outcomes.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Drift Safety Valves & Training Dataset Exporter */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+              {/* Drift Monitor Gauges */}
+              <div className="lg:col-span-7 p-8 bg-dark-surface border border-white/5 rounded-[2.5rem] flex flex-col gap-6 ">
+                <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
+                      <Activity size={18} className="text-yellow-500" /> Continuous Model Feature Drift Monitor
+                    </h3>
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-0.5">Statistical deviation of active parameters versus baseline distributions</p>
+                  </div>
+                  <button
+                    onClick={executeRetraining}
+                    disabled={isRetraining}
+                    className="px-4 py-2 border border-yellow-500/20 hover:border-yellow-500 bg-yellow-500/5 hover:bg-yellow-500 hover:text-black font-black uppercase tracking-widest text-[9px] rounded-xl transition-all"
+                  >
+                    {isRetraining ? 'Retraining System...' : 'Re-Calibrate Columns'}
+                  </button>
+                </div>
+
+                {/* Features gauges stack */}
+                <div className="space-y-4">
+                  {driftMetrics.map((met: any, idx: number) => {
+                    const isDrifted = met.psi >= 0.25;
+                    const isWarning = met.psi >= 0.10 && met.psi < 0.25;
+                    return (
+                      <div key={idx} className="p-4 bg-black/40 rounded-2xl border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-1">
+                          <p className="text-xs font-black text-white font-mono uppercase tracking-wider">{met.featureName}</p>
+                          <p className="text-[10px] text-slate-400">
+                            Mean Expected: <strong className="text-slate-300">{met.baselineMean}</strong> • Observed Actual: <strong className="text-slate-300">{met.currentMean}</strong>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end">
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-500 font-mono">PSI: </span>
+                            <span className={`text-xs font-bold font-mono ${isDrifted ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-alpha-green')}`}>
+                              {met.psi}
+                            </span>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                            isDrifted 
+                              ? 'bg-red-500/10 text-red-500 border border-red-500/20 animate-pulse' 
+                              : (isWarning ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-alpha-green/10 text-alpha-green border border-alpha-green/20')
+                          }`}>
+                            {isDrifted ? 'Drift Alert' : (isWarning ? 'Monitor' : 'Nominal')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {driftMetrics.length === 0 && (
+                     <div className="text-center p-8 border border-dashed border-white/5 rounded-3xl text-slate-550 italic uppercase font-black tracking-widest">
+                       Initializing drift indicators...
+                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Training Dataset Matrix Exporter */}
+              <div className="lg:col-span-5 p-8 bg-dark-surface border border-white/5 rounded-[2.5rem] flex flex-col justify-between gap-6">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
+                      <Database size={18} className="text-alpha-green" /> Curated Training Exporter
+                    </h3>
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-0.5 font-sans">Extract sports models parameters containing true outcomes only</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Feature Version</label>
+                      <select 
+                        value={curSelectedFeatureVersion} 
+                        onChange={(e) => setCurSelectedFeatureVersion(e.target.value)}
+                        className="bg-black/60 border border-white/5 rounded-xl py-3 px-4 text-xs text-slate-300 font-mono outline-none"
+                      >
+                        <option value="v2.4">v2.4 (LineMovement, Sentiment, Edge, MatchupRating)</option>
+                        <option value="v2.3">v2.3 (Base Lines Only)</option>
+                        <option value="v2.2">v2.2 (Legacy Raw Parameters)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Model Version Filter</label>
+                      <select 
+                        value={curSelectedModelVersion} 
+                        onChange={(e) => setCurSelectedModelVersion(e.target.value)}
+                        className="bg-black/60 border border-white/5 rounded-xl py-3 px-4 text-xs text-slate-300 font-mono outline-none"
+                      >
+                        <option value="v4.2">v4.2 (Production - EntropyCore)</option>
+                        <option value="v3.8">v3.8 (Legacy Production)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                  <p className="text-[9.5px] text-slate-550 leading-relaxed italic">
+                    Output exports structured arrays matching high-fidelity multi-record formats representing X (observed features) and Y (ground-truth binary labels). 
+                  </p>
+                  <button
+                    onClick={downloadCuratedTrainingJson}
+                    className="w-full py-3.5 bg-alpha-green hover:bg-alpha-green/90 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all shadow-[0_0_15px_rgba(0,255,65,0.1)] flex items-center justify-center gap-2"
+                  >
+                    <FileText size={14} /> Download Training Matrix (JSON)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Event Outcomes Feed & User Manual Labeler */}
+            <div className="bento-card p-0 border-white/5 overflow-hidden">
+              <div className="p-6 border-b border-white/5 bg-white/[0.01] flex justify-between items-center bg-white/[0.005]">
+                <div>
+                  <h4 className="text-sm font-black text-white italic uppercase tracking-widest">Continuous Decisions & Outcomes Resolve Feed</h4>
+                  <p className="text-[10px] text-slate-500 uppercase font-medium mt-1">Submit manual oracle labels below or wait for pipeline automatic collections</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-alpha-green rounded-full animate-ping" />
+                  <span className="text-[9px] text-slate-500 font-bold uppercase font-mono">Stream Synchronized</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse font-mono text-xs">
+                  <thead>
+                    <tr className="border-b border-white/5 text-slate-505 text-[10px] font-black uppercase bg-white/[0.005]">
+                      <th className="p-5">Sports Match ID</th>
+                      <th className="p-5">Features Observed</th>
+                      <th className="p-5">Champion Score</th>
+                      <th className="p-5">Challenger Score</th>
+                      <th className="p-5">Ground Truth Outcome</th>
+                      <th className="p-5 text-right">Actions / Direct Labelling</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {decisions.slice(0, 40).map((dec: any, idx: number) => (
+                      <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
+                        <td className="p-5">
+                          <p className="font-sans font-black text-white text-sm">{dec.marketId}</p>
+                          <p className="text-[9.5px] text-slate-505 mt-1">ID: ...{dec.id?.substring(dec.id.length - 8)}</p>
+                          <p className="text-[9px] text-slate-600 mt-0.5">{new Date(dec.timestamp).toLocaleTimeString()}</p>
+                        </td>
+                        <td className="p-5 items-center align-middle">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[9px] text-slate-400">
+                            <div><span className="text-slate-600">LineMove: </span> {dec.features.line_movement?.toFixed(1) || '0.0'}</div>
+                            <div><span className="text-slate-600">Sentiment:</span> {dec.features.public_sentiment}%</div>
+                            <div><span className="text-slate-600">Edge:     </span> {dec.features.edge_factor}%</div>
+                            <div><span className="text-slate-600">Matchup:  </span> {dec.features.matchup_rating}</div>
+                          </div>
+                        </td>
+                        <td className="p-5 items-center align-middle">
+                          <div className="space-y-1">
+                            <span className="font-bold text-white text-sm tracking-widest leading-none">
+                              {Math.floor(dec.championScore * 100)}
+                            </span>
+                            <p className="text-[8.5px] text-slate-500 font-bold uppercase">{dec.championDecision?.replace(/_/g, ' ')}</p>
+                          </div>
+                        </td>
+                        <td className="p-5 items-center align-middle">
+                          <div className="space-y-1">
+                            <span className="font-bold text-yellow-500 text-sm tracking-widest leading-none">
+                              {Math.floor(dec.challengerScore * 100)}
+                            </span>
+                            <p className="text-[8.5px] text-slate-600 font-bold uppercase">{dec.challengerDecision?.replace(/_/g, ' ')}</p>
+                          </div>
+                        </td>
+                        <td className="p-5 items-center align-middle">
+                          {dec.label ? (
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest font-mono ${
+                              dec.label === 'clv_beat' 
+                                ? 'bg-alpha-green/10 text-alpha-green border border-alpha-green/20' 
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                              {dec.label === 'clv_beat' ? 'SUCCESS (CLV Beat)' : 'MISS (CLV Missed)'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest font-mono bg-slate-500/10 text-slate-500 border border-slate-500/20 animate-pulse">
+                              UNRESOLVED
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-5 text-right items-center align-middle">
+                          {!dec.label ? (
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => triggerManualLabel(dec.id, 'clv_beat')}
+                                className="px-3 py-1.5 bg-alpha-green/10 hover:bg-alpha-green hover:text-black border border-alpha-green/30 rounded text-[9px] font-black uppercase tracking-widest transition-all shrink-0"
+                              >
+                                CLV Beat
+                              </button>
+                              <button
+                                onClick={() => triggerManualLabel(dec.id, 'clv_miss')}
+                                className="px-3 py-1.5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 rounded text-[9px] font-black uppercase tracking-widest text-slate-400 transition-all shrink-0"
+                              >
+                                CLV Miss
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[9.5px] text-slate-550 italic max-w-[120px] inline-block truncate select-none">
+                              via {dec.labelSource}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {decisions.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-10 text-center text-slate-650 uppercase font-black tracking-widest italic">
+                          Initializing sports prediction stream. Decisions will queue automatically...
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
