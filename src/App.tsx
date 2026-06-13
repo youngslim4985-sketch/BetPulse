@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { Intelligence } from './components/Intelligence';
 import { Research } from './components/Research';
 import { Portfolio } from './components/Portfolio';
+import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { ViewType } from './types';
 import { Brain, Search, X, Database, ArrowUpRight, Cpu } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function App() {
       case 'INTELLIGENCE': return <Intelligence />;
       case 'RESEARCH': return <Research />;
       case 'PORTFOLIO': return <Portfolio />;
+      case 'DEVELOPER': return <EnterpriseDashboard />;
       case 'MARKETS': return <Dashboard />; // Reuse dashboard for now as requested for pulse
       default: return <Landing />;
     }

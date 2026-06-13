@@ -8,7 +8,8 @@ import {
   User,
   LayoutDashboard,
   Search,
-  Bell
+  Bell,
+  Layers
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -25,6 +26,7 @@ export const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
     { id: 'INTELLIGENCE' as ViewType, label: 'Intelligence', icon: Brain },
     { id: 'RESEARCH' as ViewType, label: 'Research', icon: Database },
     { id: 'PORTFOLIO' as ViewType, label: 'Portfolio', icon: User },
+    { id: 'DEVELOPER' as ViewType, label: 'API Console', icon: Layers },
   ];
 
   return (

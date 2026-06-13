@@ -1,4 +1,4 @@
-export type ViewType = 'LANDING' | 'DASHBOARD' | 'MARKETS' | 'INTELLIGENCE' | 'RESEARCH' | 'PORTFOLIO';
+export type ViewType = 'LANDING' | 'DASHBOARD' | 'MARKETS' | 'INTELLIGENCE' | 'RESEARCH' | 'PORTFOLIO' | 'DEVELOPER';
 
 export interface PerformanceStats {
   alphaScore: number; // This will now represent LBS™
