@@ -1,0 +1,53 @@
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+header {
+  margin-bottom: 32px;
+}
+
+section {
+  margin-bottom: 28px;
+}
+
+.grid:not([class*="grid-cols-"]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid #243044;
+  border-radius: 16px;
+  padding: 18px;
+  background: #0b1220;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-high,
+.badge-strong {
+  background: #12351f;
+}
+
+.badge-medium,
+.badge-lean {
+  background: #3a2f11;
+}
+
+.badge-low,
+.badge-watch {
+  background: #182235;
+}
+
+.badge-danger {
+  background: #3a1212;
+}

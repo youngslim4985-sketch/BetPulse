@@ -10,6 +10,8 @@ import {
   Database
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { confidenceClass, recommendationClass } from "../utils/signal-style";
+import { Confidence, Recommendation } from "../types/market";
 
 const AlphaDriver = ({ label, value, icon: Icon, color = "text-alpha-green" }: { label: string, value: number, icon: any, color?: string }) => (
   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
@@ -107,96 +109,189 @@ const PerformanceSignal = () => {
 };
 
 export const Dashboard = () => {
-  return (
-    <div className="grid grid-cols-12 gap-8">
-      {/* Left Column: Market Intelligence */}
-      <div className="col-span-12 lg:col-span-7 flex flex-col gap-8">
-        <div className="bento-card">
-          <PerformanceSignal />
-        </div>
+  const [signals] = useState<any[]>([
+    {
+      gameId: 'g1',
+      gameName: 'LAL @ GSW',
+      sport: 'NBA',
+      market: 'GSW -3.5 Spread',
+      lbsScore: 92,
+      confidence: 'HIGH',
+      recommendation: 'STRONG_SIGNAL',
+      timestamp: '2m ago'
+    },
+    {
+      gameId: 'g2',
+      gameName: 'KC @ LV',
+      sport: 'NFL',
+      market: 'Under 47.0 Points',
+      lbsScore: 78,
+      confidence: 'MEDIUM',
+      recommendation: 'LEAN',
+      timestamp: '15m ago'
+    },
+    {
+      gameId: 'g3',
+      gameName: 'MCI @ RMA',
+      sport: 'SOCCER',
+      market: 'Draw Match Odds',
+      lbsScore: 88,
+      confidence: 'HIGH',
+      recommendation: 'WATCH',
+      timestamp: '24m ago'
+    },
+    {
+      gameId: 'g4',
+      gameName: 'NYY @ BOS',
+      sport: 'MLB',
+      market: 'NYY Moneyline',
+      lbsScore: 45,
+      confidence: 'LOW',
+      recommendation: 'NO_PLAY',
+      timestamp: '1h ago'
+    }
+  ]);
 
-        <div className="grid grid-cols-2 gap-8">
-          <div className="bento-card flex flex-col justify-between">
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Execution Depth</h3>
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-[10px] font-mono text-slate-400">Order_0{i}</span>
-                    <span className="text-[10px] font-mono text-alpha-green">{(Math.random() * 1000).toFixed(2)}Ξ</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button className="mt-8 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 hover:text-alpha-green transition-colors">
-              View Full Depth <ChevronRight size={12} />
-            </button>
+  return (
+    <div className="flex flex-col gap-10">
+      <div className="grid grid-cols-12 gap-8">
+        {/* Left Column: Market Intelligence */}
+        <div className="col-span-12 lg:col-span-7 flex flex-col gap-8">
+          <div className="bento-card">
+            <PerformanceSignal />
           </div>
 
-          <div className="bento-card flex flex-col justify-between">
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Anomaly Detection</h3>
-              <div className="flex flex-col gap-4">
-                <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
-                  <p className="text-[9px] text-red-500 font-black uppercase">Outlier Alert</p>
-                  <p className="text-[10px] text-slate-300 mt-1">Abnormal betting volume detected on NBA:LAL@GSW</p>
+          <div className="grid grid-cols-2 gap-8">
+            <div className="bento-card flex flex-col justify-between">
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Execution Depth</h3>
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
+                      <span className="text-[10px] font-mono text-slate-400">Order_0{i}</span>
+                      <span className="text-[10px] font-mono text-alpha-green">{(Math.random() * 1000).toFixed(2)}Ξ</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button className="mt-8 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 hover:text-alpha-green transition-colors">
+                View Full Depth <ChevronRight size={12} />
+              </button>
+            </div>
+
+            <div className="bento-card flex flex-col justify-between">
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Anomaly Detection</h3>
+                <div className="flex flex-col gap-4">
+                  <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                    <p className="text-[9px] text-red-500 font-black uppercase">Outlier Alert</p>
+                    <p className="text-[10px] text-slate-300 mt-1">Abnormal betting volume detected on NBA:LAL@GSW</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8 flex justify-between items-center">
+                <span className="text-[9px] font-mono text-slate-600">THREAT LEVEL: LOW</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className={`w-1 h-3 rounded-full ${i < 3 ? 'bg-red-500/40' : 'bg-white/5'}`} />
+                  ))}
                 </div>
               </div>
             </div>
-            <div className="mt-8 flex justify-between items-center">
-              <span className="text-[9px] font-mono text-slate-600">THREAT LEVEL: LOW</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className={`w-1 h-3 rounded-full ${i < 3 ? 'bg-red-500/40' : 'bg-white/5'}`} />
-                ))}
+          </div>
+        </div>
+
+        {/* Right Column: Sharp Feed */}
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-8">
+          <div className="bento-card h-full flex flex-col">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Ingestion Feed</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-alpha-green rounded-full animate-ping" />
+                <span className="text-[9px] text-alpha-green font-mono">STREAMING</span>
               </div>
             </div>
+
+            <div className="space-y-6 flex-grow overflow-y-auto scrollbar-hide pr-2">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="p-5 bg-white/5 border border-white/5 rounded-3xl group hover:border-alpha-green/20 transition-all cursor-pointer"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-black border border-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-alpha-green">
+                        {['NB', 'NF', 'ML', 'SC'][i % 4]}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black text-white italic tracking-tighter">Team_A vs Team_B</p>
+                        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Main Market • Total {220.5 + i}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[12px] font-black text-alpha-green italic tracking-tighter">+{70 + i * 2}</p>
+                      <p className="text-[8px] text-slate-600 uppercase font-black">LBS™ Score</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <button className="mt-8 w-full py-4 bg-white text-black font-black uppercase tracking-[0.2em] text-[10px] rounded-2xl hover:bg-slate-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+              Initialize Bulk Analysis
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Right Column: Sharp Feed */}
-      <div className="col-span-12 lg:col-span-5 flex flex-col gap-8">
-        <div className="bento-card h-full flex flex-col">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Ingestion Feed</h3>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-alpha-green rounded-full animate-ping" />
-              <span className="text-[9px] text-alpha-green font-mono">STREAMING</span>
-            </div>
+      {/* BetPulse Active Signals section */}
+      <div className="bento-card flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest italic">Active BetPulse™ Signals</h3>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Real-time sharp money signals evaluated via Bayesian posterior distributions</p>
           </div>
+          <div className="flex gap-2">
+            <span className="px-2 py-0.5 bg-alpha-green/10 text-alpha-green text-[9px] font-black rounded uppercase">Live Feed</span>
+          </div>
+        </div>
 
-          <div className="space-y-6 flex-grow overflow-y-auto scrollbar-hide pr-2">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="p-5 bg-white/5 border border-white/5 rounded-3xl group hover:border-alpha-green/20 transition-all cursor-pointer"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-black border border-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-alpha-green">
-                      {['NB', 'NF', 'ML', 'SC'][i % 4]}
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-black text-white italic tracking-tighter">Team_A vs Team_B</p>
-                      <p className="text-[8px] text-slate-500 uppercase tracking-widest">Main Market • Total {220.5 + i}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[12px] font-black text-alpha-green italic tracking-tighter">+{70 + i * 2}</p>
-                    <p className="text-[8px] text-slate-600 uppercase font-black">LBS™ Score</p>
-                  </div>
+        <div className="grid">
+          {signals.map((signal) => (
+            <div className="card flex flex-col justify-between gap-4" key={signal.gameId}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block mb-1">
+                    {signal.sport} • {signal.timestamp}
+                  </span>
+                  <h4 className="text-base font-black text-white italic tracking-tighter uppercase">
+                    {signal.gameName}
+                  </h4>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+                <div className="text-right">
+                  <span className="text-xl font-black text-alpha-green italic">{signal.lbsScore}</span>
+                  <span className="text-[8px] text-slate-500 uppercase font-black block">LBS™ Score</span>
+                </div>
+              </div>
 
-          <button className="mt-8 w-full py-4 bg-white text-black font-black uppercase tracking-[0.2em] text-[10px] rounded-2xl hover:bg-slate-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-            Initialize Bulk Analysis
-          </button>
+              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
+                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Target Market</p>
+                <p className="text-sm font-black text-white mt-1 italic">{signal.market}</p>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                <span className={confidenceClass(signal.confidence)}>
+                  {signal.confidence}
+                </span>
+                <span className={recommendationClass(signal.recommendation)}>
+                  {signal.recommendation.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

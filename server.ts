@@ -8,6 +8,7 @@ import { authenticateApiKey, requireTierFeature } from "./services/apiKeyAuth";
 import { rateLimiter, getOrCreateAggregate } from "./services/rateLimiter";
 import { billingService } from "./services/billing.service";
 import { feedbackLoopManager } from "./services/feedbackLoop";
+import { OddsApiProvider, MockMarketProvider, CachedMarketProvider } from "./src/providers/odds-api-provider";
 
 async function startServer() {
   const app = express();
@@ -17,6 +18,17 @@ async function startServer() {
   startIngestionPipeline();
 
   app.use(express.json());
+
+  const providerName = process.env.MARKET_PROVIDER || "mock";
+  const cacheTtlMs = Number(process.env.CACHE_TTL_MS || 30_000);
+
+  const baseProvider =
+    providerName === "odds-api"
+      ? new OddsApiProvider(process.env.ODDS_API_KEY)
+      : new MockMarketProvider();
+
+  const marketProvider = new CachedMarketProvider(baseProvider, cacheTtlMs);
+
 
   // Multi-tenant API Router (Tenant Signups, Key Generations, List Keys, Plan Upgrades)
   app.use('/api/v1', tenantsRouter);
@@ -194,6 +206,15 @@ async function startServer() {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
+
+  app.get("/api/provider/status", (req, res) => {
+    res.json({
+      success: true,
+      provider: providerName,
+      cacheTtlMs: cacheTtlMs
+    });
+  });
+
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
